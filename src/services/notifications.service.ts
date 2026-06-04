@@ -1,4 +1,4 @@
-import {
+import { limit,
   collection,
   doc,
   getDocs,
@@ -15,8 +15,10 @@ import { Notification, NotificationType } from '@/types';
 
 const COLLECTION = 'notifications';
 
-export const getNotifications = async (): Promise<Notification[]> => {
-  const q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
+export const getNotifications = async (limitCount?: number): Promise<Notification[]> => {
+  const q = limitCount
+    ? query(collection(db, COLLECTION), orderBy('createdAt', 'desc'), limit(limitCount))
+    : query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => ({
     id: doc.id,
