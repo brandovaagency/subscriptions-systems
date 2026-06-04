@@ -6,7 +6,7 @@ import {
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { auth, db } from '../lib/firebase/config';
 import { AppUser, UserPermissions, UserRole } from '@/types';
 
 export const DEFAULT_ADMIN_PERMISSIONS: UserPermissions = {
