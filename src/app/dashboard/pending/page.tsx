@@ -17,7 +17,7 @@ const toDateStr = (d: Date | { toDate(): Date }): string => {
 };
 
 export default function PendingOrdersPage() {
-  const { isAdmin, hasPermission } = useAuth();
+  const { appUser, isAdmin, hasPermission } = useAuth();
   const canAccess = isAdmin || hasPermission('add_subscription');
   const [orders, setOrders] = useState<CustomerSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +41,9 @@ export default function PendingOrdersPage() {
     if (!completingId) return;
     setConfirmLoading(true);
     try {
-      await completeOrder(completingId);
+      const sub = orders.find(o => o.id === completingId);
+      if (!sub) return;
+      await completeOrder(sub, appUser?.id || '');
       toast.success('تم تحويل الطلب إلى مكتمل وتسجيل الدخل');
       setConfirmOpen(false);
       loadOrders();
