@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: get current user data from Firestore
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper: check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    // Helper: check if user is active
+    function isActiveUser() {
+      return isAuthenticated() && getUserData().isActive == true;
+    }
+
+    // Helper: check specific permission
+    function hasPermission(perm) {
+      let user = getUserData();
+      return isAuthenticated() && user.isActive == true &&
+             (user.role == 'admin' || user.permissions[perm] == true);
+    }
+
+    // ==================== USERS ====================
+    match /users/{userId} {
+      // Any authenticated user can read their own data
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Only admins can create users (via Firebase Auth + Firestore)
+      allow create: if isAdmin();
+      // Admins can update any user; users can update their own non-role fields
+      allow update: if isAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions']));
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
+
+    // ==================== SUBSCRIPTION PRODUCTS ====================
+    match /subscriptionProducts/{productId} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if hasPermission('manage_products');
+    }
+
+    // ==================== TECHNICAL ACCOUNTS ====================
+    match /technicalAccounts/{accountId} {
+      allow read: if isActiveUser() && (hasPermission('manage_technical_accounts') || hasPermission('edit_technical_accounts') || hasPermission('add_subscription'));
+      allow create, delete: if hasPermission('manage_technical_accounts');
+      allow update: if hasPermission('manage_technical_accounts') || hasPermission('edit_technical_accounts');
+    }
+
+    // ==================== PAYMENT METHODS ====================
+    match /paymentMethods/{pmId} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if hasPermission('manage_payment_methods');
+    }
+
+    // ==================== CUSTOMER SUBSCRIPTIONS ====================
+    match /customerSubscriptions/{subId} {
+      allow read: if isActiveUser();
+      allow create: if hasPermission('add_subscription');
+      allow update: if hasPermission('edit_subscription');
+      allow delete: if hasPermission('delete_subscription');
+    }
+
+    // ==================== FINANCIAL TRANSACTIONS ====================
+    match /financialTransactions/{txId} {
+      allow read: if hasPermission('view_financial_accounts') || hasPermission('manage_financial_accounts');
+      // System creates transactions automatically; manual creation requires manage_financial_accounts
+      allow create: if hasPermission('manage_financial_accounts') || hasPermission('add_subscription') || hasPermission('edit_subscription');
+      // Financial records should never be edited or deleted (audit trail)
+      allow update, delete: if isAdmin();
+    }
+
+    // ==================== REFUND REQUESTS ====================
+    match /refundRequests/{refundId} {
+      allow read: if isActiveUser();
+      allow create: if isActiveUser();
+      allow update: if hasPermission('manage_financial_accounts') || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== NOTIFICATIONS ====================
+    match /notifications/{notifId} {
+      allow read: if hasPermission('view_notifications');
+      // System creates notifications; users can mark as read
+      allow create: if isActiveUser();
+      allow update: if hasPermission('view_notifications');
+      allow delete: if isAdmin();
+    }
+  }
+}
