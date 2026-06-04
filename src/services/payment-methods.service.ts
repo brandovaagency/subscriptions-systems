@@ -56,3 +56,7 @@ export const updatePaymentMethod = async (id: string, data: Partial<PaymentMetho
 export const deletePaymentMethod = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, COLLECTION, id));
 };
+
+export const togglePaymentMethodStatus = async (id: string, isActive: boolean): Promise<void> => {
+  await updateDoc(doc(db, COLLECTION, id), { isActive, updatedAt: serverTimestamp() });
+};
