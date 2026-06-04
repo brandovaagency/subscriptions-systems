@@ -157,27 +157,44 @@ export default function SubscriptionsPage() {
       const endDate = new Date(form.startDate);
       endDate.setMonth(endDate.getMonth() + form.durationMonths);
 
-      const data = {
+      const form2: import('@/types').CustomerSubscriptionForm = {
         customerPhone: form.customerPhone,
         productId: form.productId,
-        productName: product.name,
         durationLabel: form.durationLabel,
         durationMonths: form.durationMonths,
-        startDate,
-        endDate,
+        startDate: form.startDate,
         price: form.price,
         technicalAccountId: form.technicalAccountId || '',
-        technicalAccountEmail: techAccount?.email || form.technicalAccountEmail || '',
         orderStatus: form.orderStatus,
         notes: form.notes,
-        createdBy: appUser?.id || '',
       };
 
       if (editingSub) {
+        const data = {
+          customerPhone: form.customerPhone,
+          productId: form.productId,
+          productName: product.name,
+          durationLabel: form.durationLabel,
+          durationMonths: form.durationMonths,
+          startDate,
+          endDate,
+          price: form.price,
+          technicalAccountId: form.technicalAccountId || '',
+          technicalAccountEmail: techAccount?.email || form.technicalAccountEmail || '',
+          orderStatus: form.orderStatus,
+          notes: form.notes,
+          createdBy: appUser?.id || '',
+        };
         await updateSubscription(editingSub.id!, data);
         toast.success('تم تحديث الاشتراك بنجاح');
       } else {
-        await addSubscription(data);
+        await addSubscription(
+          form2,
+          { name: product.name },
+          { label: form.durationLabel, months: form.durationMonths, price: form.price },
+          techAccount?.email || form.technicalAccountEmail || '',
+          appUser?.id || ''
+        );
         toast.success('تم إضافة الاشتراك بنجاح');
       }
       setModalOpen(false);
